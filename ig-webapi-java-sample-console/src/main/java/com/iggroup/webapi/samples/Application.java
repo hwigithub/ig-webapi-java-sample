@@ -37,7 +37,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-
 /**
  * IG Web Trading API Sample Java application
  * <p/>
@@ -62,43 +61,50 @@ public class Application implements CommandLineRunner {
    private ArrayList<HandyTableListenerAdapter> listeners = new ArrayList<HandyTableListenerAdapter>();
 
    private String tradeableEpic = null;
+   private String[] tradeableEpics = new String[] { "CS.D.USCGC.TODAY.IP", "CS.D.BITCOIN.TODAY.IP",
+         "IX.D.DOW.DAILY.IP" };
 
    private AtomicBoolean receivedConfirm = new AtomicBoolean(false);
    private AtomicBoolean receivedOPU = new AtomicBoolean(false);
 
    @Override
    public void run(String... args) throws Exception {
-         if (args.length < 2) {
-            LOG.error("Usage:- Application identifier password apikey");
-            System.exit(-1);
-         }
-         String identifier = args[0];
-         String password = args[1];
-         String apiKey = args[2];
-         ApplicationContext applicationContext = new ClassPathXmlApplicationContext("/application-spring-context.xml");
-         Application app = (Application) applicationContext.getBean("application");
-         System.exit(SpringApplication.exit(applicationContext, () -> app.run(identifier, password, apiKey) ? 0 : 1));
+      if (args.length < 2) {
+         LOG.error("Usage:- Application identifier password apikey");
+         System.exit(-1);
+      }
+      String identifier = args[0];
+      String password = args[1];
+      String apiKey = args[2];
+      ApplicationContext applicationContext = new ClassPathXmlApplicationContext("/application-spring-context.xml");
+      Application app = (Application) applicationContext.getBean("application");
+      System.exit(SpringApplication.exit(applicationContext, () -> app.run(identifier, password, apiKey) ? 0 : 1));
    }
 
    public boolean run(final String user, final String password, final String apiKey) {
       try {
          connect(user, password, apiKey);
-         listOpenPositions();
-         listWatchlists();
-         subscribeToLighstreamerAccountUpdates();
-         subscribeToLighstreamerHeartbeat();
+         // listOpenPositions();
+         // listWatchlists();
+         // subscribeToLighstreamerAccountUpdates();
+         // subscribeToLighstreamerHeartbeat();
          subscribeToLighstreamerPriceUpdates();
-         subscribeToLighstreamerChartUpdates();
-         subscribeToLighstreamerTradeUpdates();
-         createPosition();
+         // subscribeToLighstreamerChartUpdates();
+         // subscribeToLighstreamerTradeUpdates();
+         // createPosition();
 
          LOG.info("Waiting 15 seconds...");
-         Thread.sleep(15000); // to let the streaming run a while
+         while (true) {
+            Thread.sleep(15000); // to let the streaming run a while
+            if (Boolean.valueOf(true)) {
+               continue;
+            } else {
+               // disconnect();
+               LOG.info("Done");
 
-         disconnect();
-         LOG.info("Done");
-
-         return receivedConfirm.get() && receivedOPU.get();
+               return receivedConfirm.get() && receivedOPU.get();
+            }
+         }
       } catch (Exception e) {
          LOG.error("Unexpected error:", e);
          return false;
@@ -111,7 +117,7 @@ public class Application implements CommandLineRunner {
 
    private void disconnect() throws Exception {
       unsubscribeAllLightstreamerListeners();
-     streamingAPI.disconnect();
+      streamingAPI.disconnect();
    }
 
    private void connect(String identifier, String password, String apiKey) throws Exception {
@@ -124,7 +130,8 @@ public class Application implements CommandLineRunner {
       authRequest.setPassword(password);
       authRequest.setEncryptedPassword(encrypt);
       authenticationContext = restApi.createSession(authRequest, apiKey, encrypt);
-      streamingAPI.connect(authenticationContext.getAccountId(), authenticationContext.getConversationContext(), authenticationContext.getLightstreamerEndpoint());
+      streamingAPI.connect(authenticationContext.getAccountId(), authenticationContext.getConversationContext(),
+            authenticationContext.getLightstreamerEndpoint());
    }
 
    private void listOpenPositions() throws Exception {
@@ -132,18 +139,21 @@ public class Application implements CommandLineRunner {
       GetPositionsV2Response positionsResponse = restApi.getPositionsV2(authenticationContext.getConversationContext());
       LOG.info("Open positions: {}", positionsResponse.getPositions().size());
       for (PositionsItem position : positionsResponse.getPositions()) {
-         LOG.info(position.getMarket().getEpic() + ", " + position.getMarket().getExpiry() + ", " + position.getPosition().getDirection() + ", " + position.getPosition().getSize());
+         LOG.info(position.getMarket().getEpic() + ", " + position.getMarket().getExpiry() + ", "
+               + position.getPosition().getDirection() + ", " + position.getPosition().getSize());
       }
 
    }
 
    private void listWatchlists() throws Exception {
 
-      GetWatchlistsV1Response watchlistsResponse = restApi.getWatchlistsV1(authenticationContext.getConversationContext());
+      GetWatchlistsV1Response watchlistsResponse = restApi
+            .getWatchlistsV1(authenticationContext.getConversationContext());
       LOG.info("Watchlists: {}", watchlistsResponse.getWatchlists().size());
       for (WatchlistsItem watchlist : watchlistsResponse.getWatchlists()) {
          LOG.info(watchlist.getName() + " : ");
-         GetWatchlistByWatchlistIdV1Response watchlistInstrumentsResponse = restApi.getWatchlistByWatchlistIdV1(authenticationContext.getConversationContext(), watchlist.getId());
+         GetWatchlistByWatchlistIdV1Response watchlistInstrumentsResponse = restApi
+               .getWatchlistByWatchlistIdV1(authenticationContext.getConversationContext(), watchlist.getId());
          for (MarketsItem market : watchlistInstrumentsResponse.getMarkets()) {
             LOG.info(market.getEpic());
             if (market.getStreamingPricesAvailable() && market.getMarketStatus() == MarketStatus.TRADEABLE) {
@@ -156,13 +166,14 @@ public class Application implements CommandLineRunner {
    private void createPosition() throws Exception {
 
       if (tradeableEpic != null) {
-         GetMarketDetailsV2Response marketDetails = restApi.getMarketDetailsV2(authenticationContext.getConversationContext(), tradeableEpic);
+         GetMarketDetailsV2Response marketDetails = restApi
+               .getMarketDetailsV2(authenticationContext.getConversationContext(), tradeableEpic);
 
          CreateOTCPositionV1Request createPositionRequest = new CreateOTCPositionV1Request();
          createPositionRequest.setEpic(tradeableEpic);
          createPositionRequest.setExpiry(marketDetails.getInstrument().getExpiry());
          createPositionRequest.setDirection(Direction.BUY);
-         if(marketDetails.getDealingRules().getMarketOrderPreference() != MarketOrderPreference.NOT_AVAILABLE) {
+         if (marketDetails.getDealingRules().getMarketOrderPreference() != MarketOrderPreference.NOT_AVAILABLE) {
             createPositionRequest.setOrderType(OrderType.MARKET);
          } else {
             createPositionRequest.setOrderType(OrderType.LIMIT);
@@ -174,31 +185,31 @@ public class Application implements CommandLineRunner {
          createPositionRequest.setGuaranteedStop(false);
          createPositionRequest.setForceOpen(true);
 
-         LOG.info(">>> Creating long position epic={}, expiry={} size={} orderType={} level={} currency={}", tradeableEpic, createPositionRequest.getExpiry(),
-                 createPositionRequest.getSize(), createPositionRequest.getOrderType(), createPositionRequest.getLevel(), createPositionRequest.getCurrencyCode());
+         LOG.info(">>> Creating long position epic={}, expiry={} size={} orderType={} level={} currency={}",
+               tradeableEpic, createPositionRequest.getExpiry(), createPositionRequest.getSize(),
+               createPositionRequest.getOrderType(), createPositionRequest.getLevel(),
+               createPositionRequest.getCurrencyCode());
          restApi.createOTCPositionV1(authenticationContext.getConversationContext(), createPositionRequest);
       }
 
    }
 
    private void closePositionIfCreated(UpdateInfo updateInfo) {
-      if(updateInfo.getNumFields() == 0) {
+      if (updateInfo.getNumFields() == 0) {
          return;
       }
       try {
          JsonNode content = objectMapper.readTree(updateInfo.toString());
-         if(content.isArray()) {
+         if (content.isArray()) {
             content = content.get(0);
          }
          String dealStatus = content.get("dealStatus").asText();
          String dealId = content.get("dealId").asText();
          LOG.info("Deal dealId={} has been {}", dealId, dealStatus);
-         if(content.get("dealStatus").asText().equals("ACCEPTED") && content.get("status").asText().equals("OPEN")) {
-            closeOpenPosition(
-                    content.get("affectedDeals").get(0).get("dealId").asText(),
-                    content.get("direction").asText().equals("BUY") ? "SELL" : "BUY",
-                    new BigDecimal(content.get("size").asText()),
-                    content.get("expiry").asText());
+         if (content.get("dealStatus").asText().equals("ACCEPTED") && content.get("status").asText().equals("OPEN")) {
+            closeOpenPosition(content.get("affectedDeals").get(0).get("dealId").asText(),
+                  content.get("direction").asText().equals("BUY") ? "SELL" : "BUY",
+                  new BigDecimal(content.get("size").asText()), content.get("expiry").asText());
          }
       } catch (Exception e) {
          e.printStackTrace();
@@ -207,34 +218,39 @@ public class Application implements CommandLineRunner {
    }
 
    private void closeOpenPosition(String dealId, String direction, BigDecimal size, String expiry) throws Exception {
-      GetMarketDetailsV2Response marketDetails = restApi.getMarketDetailsV2(authenticationContext.getConversationContext(), tradeableEpic);
+      GetMarketDetailsV2Response marketDetails = restApi
+            .getMarketDetailsV2(authenticationContext.getConversationContext(), tradeableEpic);
       CloseOTCPositionV1Request closePositionRequest = new CloseOTCPositionV1Request();
       closePositionRequest.setDealId(dealId);
-      closePositionRequest.setDirection(com.iggroup.webapi.samples.client.rest.dto.positions.otc.closeOTCPositionV1.Direction.valueOf(direction));
+      closePositionRequest.setDirection(
+            com.iggroup.webapi.samples.client.rest.dto.positions.otc.closeOTCPositionV1.Direction.valueOf(direction));
       closePositionRequest.setSize(size);
       closePositionRequest.setExpiry(expiry);
-      if(marketDetails.getDealingRules().getMarketOrderPreference() != MarketOrderPreference.NOT_AVAILABLE) {
-         closePositionRequest.setOrderType(com.iggroup.webapi.samples.client.rest.dto.positions.otc.closeOTCPositionV1.OrderType.MARKET);
+      if (marketDetails.getDealingRules().getMarketOrderPreference() != MarketOrderPreference.NOT_AVAILABLE) {
+         closePositionRequest.setOrderType(
+               com.iggroup.webapi.samples.client.rest.dto.positions.otc.closeOTCPositionV1.OrderType.MARKET);
       } else {
-         closePositionRequest.setOrderType(com.iggroup.webapi.samples.client.rest.dto.positions.otc.closeOTCPositionV1.OrderType.LIMIT);
+         closePositionRequest.setOrderType(
+               com.iggroup.webapi.samples.client.rest.dto.positions.otc.closeOTCPositionV1.OrderType.LIMIT);
          closePositionRequest.setLevel(marketDetails.getSnapshot().getBid());
       }
       closePositionRequest.setTimeInForce(TimeInForce.FILL_OR_KILL);
 
-      LOG.info("<<< Closing position: dealId={} direction={} size={} expiry={} orderType={} level={}", dealId, direction, size, expiry,
-              closePositionRequest.getOrderType(), closePositionRequest.getLevel());
+      LOG.info("<<< Closing position: dealId={} direction={} size={} expiry={} orderType={} level={}", dealId,
+            direction, size, expiry, closePositionRequest.getOrderType(), closePositionRequest.getLevel());
       restApi.closeOTCPositionV1(authenticationContext.getConversationContext(), closePositionRequest);
    }
 
    private void subscribeToLighstreamerAccountUpdates() throws Exception {
 
       LOG.info("Subscribing to Lightstreamer account updates");
-      listeners.add(streamingAPI.subscribeForAccountBalanceInfo(authenticationContext.getAccountId(), new HandyTableListenerAdapter() {
-         @Override
-         public void onUpdate(int i, String s, UpdateInfo updateInfo) {
-            LOG.info("Account balance info = " + updateInfo);
-         }
-      }));
+      listeners.add(streamingAPI.subscribeForAccountBalanceInfo(authenticationContext.getAccountId(),
+            new HandyTableListenerAdapter() {
+               @Override
+               public void onUpdate(int i, String s, UpdateInfo updateInfo) {
+                  LOG.info("Account balance info = " + updateInfo);
+               }
+            }));
 
    }
 
@@ -245,14 +261,14 @@ public class Application implements CommandLineRunner {
          public void onUpdate(int i, String s, UpdateInfo updateInfo) {
             LOG.info("Heartbeat = " + updateInfo);
          }
-      }, new String[]{"TRADE:HB.U.HEARTBEAT.IP"}, "MERGE", new String[]{"HEARTBEAT"}));
+      }, new String[] { "TRADE:HB.U.HEARTBEAT.IP" }, "MERGE", new String[] { "HEARTBEAT" }));
    }
 
    private void subscribeToLighstreamerPriceUpdates() throws Exception {
 
-      if (tradeableEpic != null) {
+      if (tradeableEpics != null) {
          LOG.info("Subscribing to Lightstreamer price updates for market: {} ", tradeableEpic);
-         listeners.add(streamingAPI.subscribeForMarket(tradeableEpic, new HandyTableListenerAdapter() {
+         listeners.add(streamingAPI.subscribeForMarket(tradeableEpics, new HandyTableListenerAdapter() {
             @Override
             public void onUpdate(int i, String s, UpdateInfo updateInfo) {
                LOG.info("Market i {} s {} data {}", i, s, updateInfo);
@@ -277,33 +293,36 @@ public class Application implements CommandLineRunner {
    private void subscribeToLighstreamerTradeUpdates() throws Exception {
 
       LOG.info("Subscribing to Lightstreamer trade updates");
-      listeners.add(streamingAPI.subscribeForOPUs(authenticationContext.getAccountId(), new HandyTableListenerAdapter() {
-         @Override
-         public void onUpdate(int i, String s, UpdateInfo updateInfo) {
-            if (updateInfo.getNewValue("OPU") != null) {
-               LOG.info("Position update i {} s {} data {}", i, s, updateInfo);
-               receivedOPU.set(true);
-            }
-         }
-      }));
-      listeners.add(streamingAPI.subscribeForWOUs(authenticationContext.getAccountId(), new HandyTableListenerAdapter() {
-         @Override
-         public void onUpdate(int i, String s, UpdateInfo updateInfo) {
-            if (updateInfo.getNewValue("WOU") != null) {
-               LOG.info("Working order update i {} s {} data {}", i, s, updateInfo);
-            }
-         }
-      }));
-      listeners.add(streamingAPI.subscribeForConfirms(authenticationContext.getAccountId(), new HandyTableListenerAdapter() {
-         @Override
-         public void onUpdate(int i, String s, UpdateInfo updateInfo) {
-            if (shouldClosePositionForConfirm(updateInfo)) {
-               LOG.info("Trade confirm update i {} s {} data {}", i, s, updateInfo);
-               receivedConfirm.set(true);
-               closePositionIfCreated(updateInfo);
-            }
-         }
-      }));
+      listeners
+            .add(streamingAPI.subscribeForOPUs(authenticationContext.getAccountId(), new HandyTableListenerAdapter() {
+               @Override
+               public void onUpdate(int i, String s, UpdateInfo updateInfo) {
+                  if (updateInfo.getNewValue("OPU") != null) {
+                     LOG.info("Position update i {} s {} data {}", i, s, updateInfo);
+                     receivedOPU.set(true);
+                  }
+               }
+            }));
+      listeners
+            .add(streamingAPI.subscribeForWOUs(authenticationContext.getAccountId(), new HandyTableListenerAdapter() {
+               @Override
+               public void onUpdate(int i, String s, UpdateInfo updateInfo) {
+                  if (updateInfo.getNewValue("WOU") != null) {
+                     LOG.info("Working order update i {} s {} data {}", i, s, updateInfo);
+                  }
+               }
+            }));
+      listeners.add(
+            streamingAPI.subscribeForConfirms(authenticationContext.getAccountId(), new HandyTableListenerAdapter() {
+               @Override
+               public void onUpdate(int i, String s, UpdateInfo updateInfo) {
+                  if (shouldClosePositionForConfirm(updateInfo)) {
+                     LOG.info("Trade confirm update i {} s {} data {}", i, s, updateInfo);
+                     receivedConfirm.set(true);
+                     closePositionIfCreated(updateInfo);
+                  }
+               }
+            }));
    }
 
    private void unsubscribeAllLightstreamerListeners() throws Exception {
@@ -312,7 +331,7 @@ public class Application implements CommandLineRunner {
          streamingAPI.unsubscribe(listener.getSubscribedTableKey());
       }
    }
-   
+
    private boolean shouldClosePositionForConfirm(UpdateInfo updateInfo) {
       return updateInfo.getNewValue(CONFIRMS) != null && updateInfo.isValueChanged(CONFIRMS);
    }
