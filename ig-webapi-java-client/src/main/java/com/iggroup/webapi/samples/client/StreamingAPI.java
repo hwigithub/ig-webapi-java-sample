@@ -149,24 +149,43 @@ public class StreamingAPI {
 		return adapter;
 	}
 
-	public HandyTableListenerAdapter subscribeForMarket(String epic,
-			HandyTableListenerAdapter adapter) throws Exception {
-		String subscriptionKey = MARKET_L1_PATTERN.replace("{epic}", epic);
+	
+	public HandyTableListenerAdapter subscribeForMarket(String[] epics, HandyTableListenerAdapter adapter)
+			throws Exception {
+		final LinkedList<String> es = new LinkedList<>();
+		for (final String epic : epics)
+			es.add(MARKET_L1_PATTERN.replace("{epic}", epic));
+		System.out.println("epics: " + es);
 
-		ExtendedTableInfo extendedTableInfo = new ExtendedTableInfo(
-				new String[]{subscriptionKey}, "MERGE", new String[]{"BID",
-						"OFFER", "MARKET_STATE"}, true);
+		// String subscriptionKey = MARKET_L1_PATTERN.replace("{epic}", epic);
+		// String subscriptionKey2 = MARKET_L1_PATTERN.replace("{epic}",
+		// "CS.D.BITCOIN.TODAY.IP");
+		// String subscriptionKey3 = MARKET_L1_PATTERN.replace("{epic}",
+		// "IX.D.DOW.DAILY.IP");
 
-		final SubscribedTableKey subscribedTableKey = lsClient.subscribeTable(
-				extendedTableInfo, adapter, false);
+		ExtendedTableInfo extendedTableInfo = new ExtendedTableInfo(es.toArray(new String[es.size()]), "MERGE",
+				new String[] { "BID", "OFFER", "MARKET_STATE" }, true);
+
+		final SubscribedTableKey subscribedTableKey = lsClient.subscribeTable(extendedTableInfo, adapter, false);
 		adapter.setSubscribedTableKey(subscribedTableKey);
 		return adapter;
 	}
 
-	public HandyTableListenerAdapter subscribeForMarket(String epic, HandyTableListenerAdapter adapter, String... fields) throws Exception {
-		String subscriptionKey = MARKET_L1_PATTERN.replace("{epic}", epic);
+	public HandyTableListenerAdapter subscribeForMarket(String[] epics, HandyTableListenerAdapter adapter,
+			String... fields) throws Exception {
+		final LinkedList<String> es = new LinkedList<>();
+		for (final String epic : epics)
+			es.add(MARKET_L1_PATTERN.replace("{epic}", epic));
+		System.out.println("epics: " + es);
 
-		ExtendedTableInfo extendedTableInfo = new ExtendedTableInfo(new String[] { subscriptionKey }, "MERGE", fields, true);
+		// String subscriptionKey = MARKET_L1_PATTERN.replace("{epic}", epic);
+		// String subscriptionKey2 = MARKET_L1_PATTERN.replace("{epic}",
+		// "CS.D.BITCOIN.TODAY.IP");
+		// String subscriptionKey3 = MARKET_L1_PATTERN.replace("{epic}",
+		// "IX.D.DOW.DAILY.IP");
+
+		ExtendedTableInfo extendedTableInfo = new ExtendedTableInfo(es.toArray(new String[es.size()]), "MERGE", fields,
+				true);
 
 		final SubscribedTableKey subscribedTableKey = lsClient.subscribeTable(extendedTableInfo, adapter, false);
 		adapter.setSubscribedTableKey(subscribedTableKey);
