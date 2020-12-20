@@ -282,7 +282,7 @@ public class Application implements CommandLineRunner {
 
       if (tradeableEpic != null) {
          logStatusMessage(String.format("Subscribing to Lightstreamer price updates for market: %s ", tradeableEpic));
-         listeners.add(streamingAPI.subscribeForMarket(tradeableEpic, new HandyTableListenerAdapter() {
+         listeners.add(streamingAPI.subscribeForMarket(new String[] { tradeableEpic }, new HandyTableListenerAdapter() {
             @Override
             public void onUpdate(int i, String s, UpdateInfo updateInfo) {
                marketOffer = Double.valueOf(updateInfo.getNewValue("OFFER"));
